@@ -1,0 +1,51 @@
+name: Windows offline tests
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: windows-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        node: [22, 24]
+    env:
+      GROK_BOT_ROOT: C:\grokbot-no-profile
+      GROKBOT_TOKEN: ''
+      GROKBOT_MODE: agent
+      TEMP: C:\gt
+      TMP: C:\gt
+    steps:
+      - name: Prepare isolated temporary directory
+        shell: pwsh
+        run: |
+          if (Test-Path -LiteralPath $env:GROK_BOT_ROOT) { throw 'The test profile must not exist' }
+          New-Item -ItemType Directory -Force $env:TEMP | Out-Null
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+      - name: Install locked dependencies
+        run: npm ci
+      - name: Run full offline test suite
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force artifacts | Out-Null
+          npm test 2>&1 | Tee-Object -FilePath artifacts/test-output.txt
+          $testExitCode = $LASTEXITCODE
+          if ($testExitCode -ne 0) { throw "Offline tests failed with exit code $testExitCode" }
+      - name: Upload test log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-log-node-${{ matrix.node }}
+          path: artifacts/test-output.txt
+          if-no-files-found: warn

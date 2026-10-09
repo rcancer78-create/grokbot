@@ -1,0 +1,17 @@
+node_modules/
+research/
+.grokbot-runs/
+.grokbot-proxy.pid
+.env
+.env.*
+*.log
+!.env.example
+artifacts/
+coverage/
+test-results/
+.test-tmp/
+*.tmp
+*.bak
+*.orig
+*.rej
+/docs/work/
